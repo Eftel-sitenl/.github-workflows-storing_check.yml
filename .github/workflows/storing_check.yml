@@ -1,0 +1,29 @@
+name: 24/7 Efteling Storing Checker
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Draait elke 5 minuten
+  workflow_dispatch: # Maakt handmatig starten via GitHub mogelijk
+
+jobs:
+  check-storingen:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Code ophalen uit repository
+        uses: actions/checkout@v4
+
+      - name: Node.js omgeving instellen
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Voer checker.js uit
+        run: node checker.js
+        env:
+          JSONBIN_BIN_ID: ${{ secrets.JSONBIN_BIN_ID }}
+          JSONBIN_KEY: ${{ secrets.JSONBIN_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
