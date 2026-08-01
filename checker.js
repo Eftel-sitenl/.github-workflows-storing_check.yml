@@ -1,16 +1,14 @@
-const fs = require('fs');
-
 console.log("Start controle van real-time attractie- en parkdata via Queue-Times API...");
 
 async function checkStoringen() {
     const endpoint = 'https://queue-times.com/parks/160/queue_times.json';
     
-    // Jouw jsonbin.io gegevens
-    const BIN_ID = '6a6c9bc0f5f4af5e29d9f1d5';
+    // Jouw jsonbin.io gegevens (vul hier jouw Bin ID in)
+    const BIN_ID = 'JOUW_BIN_ID_HIER';
     const API_KEY = process.env.JSONBIN_API_KEY; // Wordt veilig ingelezen vanuit GitHub Secrets
 
     try {
-        // 1. Haal de actuele data op van Queue-Times
+        // 1. Haal de data op van Queue-Times
         const response = await fetch(endpoint, {
             headers: {
                 'User-Agent': 'Eftel-site-checker/1.0 (Contact: admin@eftel-site.nl)',
@@ -25,7 +23,6 @@ async function checkStoringen() {
         const data = await response.json();
         let storingenLijst = [];
 
-        // Data parsen (identiek aan je parklogica)
         if (data.lands && Array.isArray(data.lands)) {
             data.lands.forEach(land => {
                 if (land.rides && Array.isArray(land.rides)) {
@@ -54,66 +51,13 @@ async function checkStoringen() {
             });
         }
 
-        // Huidige datum voor het logboek
-        const huidigeDatumStr = new Date().toISOString().split('T')[0];
-        const actUur = new Date().getHours() + (new Date().getMinutes() / 60);
-
-        // 2. Haal eerst de bestaande logboekdata op uit jsonbin.io om de geschiedenis niet te overschrijven
-        let bestaandLogboek = {};
-        try {
-            const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                headers: { "X-Master-Key": API_KEY }
-            });
-            if (getRes.ok) {
-                const existingData = await getRes.json();
-                if (existingData && existingData.record && existingData.record.storingsLogBoek) {
-                    if (existingData.record.storingsLogBoek.datum === huidigeDatumStr) {
-                        bestaandLogboek = existingData.record.storingsLogBoek.logboek || {};
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn("Kon bestaand logboek niet inlezen, start met een schone lei.", e.message);
-        }
-
-        // 3. Update het logboek op basis van de actuele storingen
-        storingenLijst.forEach(storing => {
-            let attractieNaam = storing.name;
-            if (!bestaandLogboek[attractieNaam]) {
-                bestaandLogboek[attractieNaam] = [];
-            }
-            let sessies = bestaandLogboek[attractieNaam];
-            let laatsteSessie = sessies[sessies.length - 1];
-
-            if (!laatsteSessie || laatsteSessie.eind !== null) {
-                sessies.push({ start: Number(actUur.toFixed(2)), eind: null });
-            }
-        });
-
-        // Sluit actieve storingen die inmiddels zijn opgelost
-        Object.keys(bestaandLogboek).forEach(attractieNaam => {
-            let stillInStore = storingenLijst.some(s => s.name === attractieNaam);
-            let sessies = bestaandLogboek[attractieNaam];
-            if (sessies && sessies.length > 0) {
-                let laatsteSessie = sessies[sessies.length - 1];
-                if (!stillInStore && laatsteSessie && laatsteSessie.eind === null) {
-                    laatsteSessie.eind = Number(actUur.toFixed(2));
-                }
-            }
-        });
-
-        // 4. Bouw het totale object op voor jsonbin.io
-        const payload = {
+        const outputData = {
             updated_at: new Date().toISOString(),
             storingen_count: storingenLijst.length,
-            storingen: storingenLijst,
-            storingsLogBoek: {
-                datum: huidigeDatumStr,
-                logboek: bestaandLogboek
-            }
+            storingen: storingenLijst
         };
 
-        // 5. Stuur de data door naar jsonbin.io via een PUT request
+        // 2. Stuur de schone data door naar jsonbin.io
         console.log("Gegevens doorsturen naar jsonbin.io...");
         const jsonBinResponse = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
             method: 'PUT',
@@ -121,14 +65,14 @@ async function checkStoringen() {
                 'Content-Type': 'application/json',
                 'X-Master-Key': API_KEY
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(outputData)
         });
 
         if (!jsonBinResponse.ok) {
             throw new Error(`Fout bij opslaan op jsonbin.io: ${jsonBinResponse.status}`);
         }
 
-        console.log("✅ jsonbin.io succesvol geüpdatet! Aantal storingen: " + storingenLijst.length);
+        console.log("✅ jsonbin.io succesvol geüpdatet met " + storingenLijst.length + " storing(en).");
         process.exit(0); 
 
     } catch (error) {
