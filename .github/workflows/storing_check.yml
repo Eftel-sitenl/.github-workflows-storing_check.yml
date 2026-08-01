@@ -3,7 +3,7 @@ name: Storing Check
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # Zorgt ervoor dat je de workflow handmatig kunt starten
+  workflow_dispatch:
 
 jobs:
   build-and-run:
@@ -16,11 +16,9 @@ jobs:
       - name: Node.js omgeving instellen
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # Geüpdatet naar 24 om de waarschuwingen op te lossen
-          # De regel "cache: 'npm'" is verwijderd om de lock-file fout (exit code 254) te voorkomen
+          node-version: '24'
 
-      - name: Install dependencies
-        run: npm install
+      # De 'npm install' stap is hier volledig verwijderd
 
       - name: Voer checker.js uit
         run: node checker.js
