@@ -4,7 +4,7 @@ async function checkStoringen() {
     const endpoint = 'https://queue-times.com/parks/160/queue_times.json';
     
     // Jouw jsonbin.io gegevens (vul hier jouw Bin ID in)
-    const BIN_ID = 'JOUW_BIN_ID_HIER';
+    const BIN_ID = '6a6dc181f5f4af5e29dd650d';
     const API_KEY = process.env.JSONBIN_API_KEY; // Wordt veilig ingelezen vanuit GitHub Secrets
 
     try {
