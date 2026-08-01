@@ -1,33 +1,29 @@
-name: Storing Check
+name: 24/7 Efteling Storing Checker
 
 on:
-  push:
-    branches: [ "main" ]
+  workflow_dispatch:
   schedule:
-    # Optioneel: draait bijvoorbeeld elk uur automatisch
-    - cron: '0 * * * *'
-  workflow_dispatch: # Zorgt ervoor dat je de workflow handmatig kunt starten via GitHub
+    - cron: '*/15 * * * *' # Draait bijvoorbeeld elke 15 minuten
 
 jobs:
-  build-and-run:
+  check-storingen:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Haal de code op uit de repository
       - name: Code ophalen uit repository
         uses: actions/checkout@v4
 
-      # 2. Stel Node.js in
       - name: Node.js omgeving instellen
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm' # Optioneel: versnelt npm install door caching
+          node-version: '22'
+          cache: 'npm'
 
-      # 3. Installeer dependencies (draait standaard in de root)
       - name: Install dependencies
         run: npm install
 
-      # 4. Voer je checker script uit
       - name: Voer checker.js uit
         run: node checker.js
+        # Als je environment variables gebruikt, voeg ze hier toe:
+        # env:
+        #   API_KEY: ${{ secrets.MY_API_KEY }}
