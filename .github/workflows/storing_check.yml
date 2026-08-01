@@ -3,11 +3,16 @@ name: 24/7 Efteling Storing Checker
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *' # Draait bijvoorbeeld elke 15 minuten
+    - cron: '*/15 * * * *'
 
 jobs:
-  check-storingen:
+  build-and-run:
     runs-on: ubuntu-latest
+
+    # Dwing de runner om alle stappen in de root van je opslagruimte uit te voeren
+    defaults:
+      run:
+        working-directory: ./
 
     steps:
       - name: Code ophalen uit repository
@@ -17,13 +22,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
 
       - name: Voer checker.js uit
         run: node checker.js
-        # Als je environment variables gebruikt, voeg ze hier toe:
-        # env:
-        #   API_KEY: ${{ secrets.MY_API_KEY }}
+
