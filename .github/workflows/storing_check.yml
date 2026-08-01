@@ -1,18 +1,13 @@
-name: 24/7 Efteling Storing Checker
+name: Storing Check
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '*/15 * * * *'
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # Zorgt ervoor dat je de workflow handmatig kunt starten
 
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
-
-    # Dwing de runner om alle stappen in de root van je opslagruimte uit te voeren
-    defaults:
-      run:
-        working-directory: ./
 
     steps:
       - name: Code ophalen uit repository
@@ -21,11 +16,11 @@ jobs:
       - name: Node.js omgeving instellen
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24' # Geüpdatet naar 24 om de waarschuwingen op te lossen
+          # De regel "cache: 'npm'" is verwijderd om de lock-file fout (exit code 254) te voorkomen
 
       - name: Install dependencies
         run: npm install
 
       - name: Voer checker.js uit
         run: node checker.js
-
