@@ -1,43 +1,69 @@
-// checker.js
-console.log("Start controle van real-time attractie- en parkdata...");
+console.log("Start controle van real-time attractie- en parkdata via Queue-Times API...");
 
 async function checkStoringen() {
-    const endpoint = 'https://jouw-api-endpoint.nl/status'; // Vervang dit door de daadwerkelijke feed
+    // De specifieke endpoint voor de Efteling (Park ID: 160)
+    const endpoint = 'https://queue-times.com/parks/160/queue_times.json';
 
     try {
-        const response = await fetch(endpoint);
+        const response = await fetch(endpoint, {
+            headers: {
+                // Herkenbare User-Agent meesturen, Queue-Times waardeert dit
+                'User-Agent': 'Eftel-site-checker/1.0 (Contact: admin@eftel-site.nl)',
+                'Accept': 'application/json'
+            }
+        });
 
         if (!response.ok) {
-            throw new Error(`Fout bij bereiken van de server: ${response.status} ${response.statusText}`);
+            throw new Error(`Server weigert de verbinding: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
+        let storingenLijst = [];
+
+        // --- Data parsen voor Queue-Times ---
+        // Queue-Times groepeert attracties ("rides") vaak binnen themagebieden ("lands").
+        // We loopen door alle "lands" en vervolgens door alle "rides" in dat gebied.
+        if (data.lands && Array.isArray(data.lands)) {
+            data.lands.forEach(land => {
+                if (land.rides && Array.isArray(land.rides)) {
+                    land.rides.forEach(ride => {
+                        // Queue-Times gebruikt 'is_open' (boolean) om aan te geven of een ride draait
+                        if (ride.is_open === false) {
+                            storingenLijst.push(ride.name);
+                        }
+                    });
+                }
+            });
+        }
         
-        // --- Hier komt jouw logica om de feed te parsen ---
-        // Bijvoorbeeld: checken of een specifieke attractie de status 'in onderhoud' of 'storing' heeft
-        let storingenGevonden = false;
-
-        // Voorbeeld:
-        // if (data.status === 'storing') { storingenGevonden = true; }
-
-        if (storingenGevonden) {
-            console.log("⚠️ Let op: Er is een storing gedetecteerd in de data feed.");
-            // Hier kun je logica toevoegen om bijvoorbeeld een webhook te sturen of een JSON te updaten
-        } else {
-            console.log("✅ Alles is operationeel. Geen bijzonderheden in de feed gevonden.");
+        // Soms staan er ook attracties direct in een algemene "rides" array (buiten de "lands" om)
+        if (data.rides && Array.isArray(data.rides)) {
+            data.rides.forEach(ride => {
+                if (ride.is_open === false && !storingenLijst.includes(ride.name)) {
+                    storingenLijst.push(ride.name);
+                }
+            });
         }
 
-        // Script succesvol afronden
-        process.exit(0); 
+        // --- Resultaat verwerken ---
+        if (storingenLijst.length > 0) {
+            console.log("⚠️ Let op: De volgende attracties zijn momenteel gesloten of in storing:");
+            console.log(storingenLijst.join(", "));
+            
+            // Je script is succesvol uitgevoerd, dus exit code 0
+            process.exit(0); 
+        } else {
+            console.log("✅ Alles is operationeel. Geen sluitingen gemeld op Queue-Times.");
+            process.exit(0);
+        }
 
     } catch (error) {
-        console.error("❌ Fout tijdens het uitvoeren van de check:", error.message);
+        console.error("❌ Fout tijdens het ophalen van de Queue-Times API:", error.message);
         
-        // process.exit(1) zorgt ervoor dat GitHub Actions deze run rood markeert (Failed)
-        // Dit is handig zodat je direct een melding krijgt als het script zelf crasht
+        // Laat GitHub Actions de workflow rood markeren bij een API/Netwerk fout
         process.exit(1); 
     }
 }
 
-// Voer de functie uit
+// Voer het script uit
 checkStoringen();
